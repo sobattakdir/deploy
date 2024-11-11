@@ -1,0 +1,64 @@
+version: '3'
+
+services: 
+  mysql:
+    container_name: sobat-takdir-mysql
+    image: mysql:8.0.27
+    platform: linux/x86_64
+    command: --default-authentication-plugin=mysql_native_password
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USERNAME: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+    ports:
+      - '3306:3306'
+    restart: always
+    volumes:
+      - mysql:/var/lib/mysql
+
+  app:
+    container_name: sobat-takdir-service
+    image: ${IMAGE}
+    platform: linux/x86_64
+    env_file:
+      - .env
+    restart: always
+    ports: ["3000:3000"]
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+    depends_on:
+      - mysql
+
+  minio:
+    container_name: minio
+    image: minio/minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - 'minio:/data'
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=miniominio
+    restart: always
+    platform: linux/x86_64
+    command: server /data --console-address ":9001"
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+      - minio
+
+volumes:
+  mysql:
+  minio:
